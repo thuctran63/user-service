@@ -1,0 +1,17 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: user-service
+  data:
+    mongodb:
+      uri: mongodb+srv://admin:admin@user.ctcfm.mongodb.net/?retryWrites=true&w=majority&appName=User
+      database: User
+      auto-index-creation: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger
+  api-docs:
+    path: /api-docs
