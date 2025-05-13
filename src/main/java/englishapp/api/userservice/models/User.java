@@ -1,6 +1,7 @@
 package englishapp.api.userservice.models;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -38,6 +39,9 @@ public class User {
 
     @Field("role")
     private String role;
+
+    @Field("block_endpoint")
+    private List<String> listBlockEndpoint;
 
     @CreatedDate
     @Field("created_at")

@@ -2,8 +2,15 @@ package englishapp.api.userservice.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import englishapp.api.userservice.dto.apiGetAllUser.OutputParamApiGetAllUser;
 import englishapp.api.userservice.dto.apiGetInfoUser.OutputParamApiGetInfoUser;
+import englishapp.api.userservice.dto.apiGetNumberOfUser.OutputParamApiGetNumberOfUser;
+import englishapp.api.userservice.dto.apiUpdatePermission.InputParamApiUpdatePermission;
 import englishapp.api.userservice.dto.apiUpdateUser.InputParamApiUpdateUser;
 import englishapp.api.userservice.dto.apiUpdateUser.OutputParamApiUpdateUser;
 import englishapp.api.userservice.repositories.UserRepository;
@@ -14,6 +21,8 @@ import reactor.core.publisher.Mono;
 public class UserService {
     @Autowired
     private UserRepository userRepository;
+
+    private static final Logger logger = LogManager.getLogger(UserService.class);
 
     public Mono<OutputParamApiGetAllUser> getAllUser() {
         return userRepository.findAll() // Lấy tất cả người dùng từ repository
@@ -82,4 +91,34 @@ public class UserService {
                 })
                 .then();
     }
+
+    public Mono<OutputParamApiGetNumberOfUser> getNumberOfUser() {
+        return userRepository.count()
+                .map(count -> {
+                    OutputParamApiGetNumberOfUser output = new OutputParamApiGetNumberOfUser();
+                    output.setNumberOfUser(count.intValue());
+                    return output;
+                });
+    }
+
+    public Mono<Void> updatePermission(InputParamApiUpdatePermission input) {
+        return userRepository.findById(
+                input.getIdUser())
+                .flatMap(user -> {
+                    // Update user permissions here
+                    // Assuming you have a method to update permissions in your User model
+                    if (user.getListBlockEndpoint() == null) {
+                        user.setListBlockEndpoint(new ArrayList<>());
+                        user.getListBlockEndpoint().add(input.getNamePermission());
+                    } else {
+                        user.getListBlockEndpoint().add(input.getNamePermission());
+                    }
+                    // Save the updated user
+                    return userRepository.save(user)
+                            .then();
+                })
+                .doOnSuccess(v -> logger.info("Password changed successfully for userId: {}", input.getIdUser()))
+                .doOnError(error -> logger.error("Error changing password: {}", error.getMessage()));
+    }
+
 }
