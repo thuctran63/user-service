@@ -13,6 +13,7 @@ import api.common.englishapp.requests.CommonResponse;
 import api.common.englishapp.requests.ResponseUtil;
 import englishapp.api.userservice.dto.apiAddNewPermission.InputParamAddNewPermission;
 import englishapp.api.userservice.dto.apiChangePassword.InputParamApiChangePassword;
+import englishapp.api.userservice.dto.apiGetPermissionOfUser.InputParamApiGetPermissionOfUser;
 import englishapp.api.userservice.dto.apiUpdatePermission.InputParamApiUpdatePermission;
 import englishapp.api.userservice.dto.apiUpdateUser.InputParamApiUpdateUser;
 import englishapp.api.userservice.services.PermissionService;
@@ -102,22 +103,7 @@ public class UserController {
     }
 
     @RequiresAuth(roles = { "ADMIN" })
-    @GetMapping("/getPermission")
-    @Operation(summary = "Lấy danh sách quyền", description = "Cung cấp chức năng lấy danh sách quyền")
-    public Mono<ResponseEntity<CommonResponse<?>>> getPermission(ServerWebExchange exchange) {
-        UserData userData = exchange.getAttribute("USER_DATA");
-        if (userData == null) {
-            return Mono.just(ResponseUtil.unAuthorized("userId is null"));
-        }
-        return permissionService.getAllPermissions().flatMap(data -> {
-            return Mono.just(ResponseUtil.ok(data));
-        }).onErrorResume(e -> {
-            return Mono.just(ResponseUtil.serverError(e.getMessage()));
-        });
-    }
-
-    @RequiresAuth(roles = { "ADMIN" })
-    @PostMapping("/updateBlockEndpoint")
+    @PostMapping("/updatePermission")
     @Operation(summary = "Cập nhật quyền", description = "Cung cấp chức năng cập nhật quyền cho người dùng")
     public Mono<ResponseEntity<CommonResponse<?>>> updatePermission(ServerWebExchange exchange,
             @RequestBody InputParamApiUpdatePermission input) {
@@ -149,4 +135,26 @@ public class UserController {
             return Mono.just(ResponseUtil.serverError(e.getMessage()));
         });
     }
+
+    @PostMapping("/getPermissionOfUser")
+    @RequiresAuth(roles = { "ADMIN" })
+    @Operation(summary = "Lấy quyền của người dùng", description = "Cung cấp chức năng lấy quyền của người dùng")
+    public Mono<ResponseEntity<CommonResponse<?>>> getPermissionOfUser(ServerWebExchange exchange,
+            @RequestBody InputParamApiGetPermissionOfUser input) {
+        UserData userData = exchange.getAttribute("USER_DATA");
+        if (userData == null) {
+            return Mono.just(ResponseUtil.unAuthorized("userId is null"));
+        }
+
+        return userService.getPermissionOfUser(input.getIdUser())
+                .map(data -> {
+                    if (data.getPermissions() == null || data.getPermissions().isEmpty()) {
+                        return ResponseUtil.noContent(); // 204 nếu danh sách permission trống
+                    }
+                    return ResponseUtil.ok(data);
+                })
+                .defaultIfEmpty(ResponseUtil.noContent()) // 204 nếu Mono rỗng (không có user)
+                .onErrorResume(error -> Mono.just(ResponseUtil.serverError(error.getMessage())));
+    }
+
 }

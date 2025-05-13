@@ -4,6 +4,5 @@ import lombok.Data;
 
 @Data
 public class InputParamAddNewPermission {
-    private String name;
-
+    private String namePermission;
 }

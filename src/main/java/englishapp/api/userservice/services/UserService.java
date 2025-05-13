@@ -10,9 +10,11 @@ import org.apache.logging.log4j.Logger;
 import englishapp.api.userservice.dto.apiGetAllUser.OutputParamApiGetAllUser;
 import englishapp.api.userservice.dto.apiGetInfoUser.OutputParamApiGetInfoUser;
 import englishapp.api.userservice.dto.apiGetNumberOfUser.OutputParamApiGetNumberOfUser;
+import englishapp.api.userservice.dto.apiGetPermissionOfUser.OutputParamApiGetPermissionOfUser;
 import englishapp.api.userservice.dto.apiUpdatePermission.InputParamApiUpdatePermission;
 import englishapp.api.userservice.dto.apiUpdateUser.InputParamApiUpdateUser;
 import englishapp.api.userservice.dto.apiUpdateUser.OutputParamApiUpdateUser;
+import englishapp.api.userservice.repositories.PermissionRepository;
 import englishapp.api.userservice.repositories.UserRepository;
 import englishapp.api.userservice.utils.PasswordUtil;
 import reactor.core.publisher.Mono;
@@ -21,6 +23,9 @@ import reactor.core.publisher.Mono;
 public class UserService {
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PermissionRepository permissionRepository;
 
     private static final Logger logger = LogManager.getLogger(UserService.class);
 
@@ -109,16 +114,43 @@ public class UserService {
                     // Assuming you have a method to update permissions in your User model
                     if (user.getListBlockEndpoint() == null) {
                         user.setListBlockEndpoint(new ArrayList<>());
+                    }
+
+                    if ("ALLOW".equalsIgnoreCase(input.getTypeUpdate())) {
+                        user.getListBlockEndpoint().remove(input.getNamePermission());
+                    } else if ("BLOCK".equalsIgnoreCase(input.getTypeUpdate())) {
                         user.getListBlockEndpoint().add(input.getNamePermission());
                     } else {
-                        user.getListBlockEndpoint().add(input.getNamePermission());
+                        return Mono.error(new RuntimeException("Invalid typeUpdate value"));
                     }
                     // Save the updated user
                     return userRepository.save(user)
                             .then();
                 })
-                .doOnSuccess(v -> logger.info("Password changed successfully for userId: {}", input.getIdUser()))
-                .doOnError(error -> logger.error("Error changing password: {}", error.getMessage()));
+                .doOnSuccess(v -> logger.info("Update permission successfully for userId: {}", input.getIdUser()))
+                .doOnError(error -> logger.error("Error Update permission: {}", error.getMessage()));
+    }
+
+    public Mono<OutputParamApiGetPermissionOfUser> getPermissionOfUser(String idUser) {
+        return userRepository.findById(idUser)
+                .flatMap(user -> {
+                    OutputParamApiGetPermissionOfUser output = new OutputParamApiGetPermissionOfUser();
+                    ArrayList<OutputParamApiGetPermissionOfUser.PermissionDTO> permissions = new ArrayList<>();
+                    return permissionRepository.findAll()
+                            .map(permission -> {
+                                OutputParamApiGetPermissionOfUser.PermissionDTO permissionDTO = output.new PermissionDTO();
+                                permissionDTO.setId(permission.getIdPermission());
+                                permissionDTO.setName(permission.getName());
+                                permissionDTO.setAllowed(!user.getListBlockEndpoint().contains(permission.getName()));
+                                permissions.add(permissionDTO);
+                                return permissionDTO;
+                            })
+                            .collectList()
+                            .map(permissionsList -> {
+                                output.setPermissions(permissionsList);
+                                return output;
+                            });
+                }).switchIfEmpty(Mono.empty()); // Trả về Mono.empty() nếu không tìm thấy người dùng;
     }
 
 }

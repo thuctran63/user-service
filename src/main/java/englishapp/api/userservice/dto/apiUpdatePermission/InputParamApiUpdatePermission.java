@@ -6,4 +6,5 @@ import lombok.Data;
 public class InputParamApiUpdatePermission {
     private String idUser;
     private String namePermission;
+    private String typeUpdate; // "ALLOW" or "BLOCK"
 }
