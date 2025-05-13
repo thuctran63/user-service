@@ -2,6 +2,7 @@ package englishapp.api.userservice.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,6 +21,20 @@ import reactor.core.publisher.Mono;
 public class UserController {
     @Autowired
     private UserService userService;
+
+    @RequiresAuth(roles = { "ADMIN" })
+    @GetMapping("/getAllUser")
+    public Mono<ResponseEntity<CommonResponse<?>>> getAllUser(ServerWebExchange exchange) {
+        UserData userData = exchange.getAttribute("USER_DATA");
+        if (userData == null) {
+            return Mono.just(ResponseUtil.unAuthorized("userId is null"));
+        }
+        return userService.getAllUser().flatMap(data -> {
+            return Mono.just(ResponseUtil.ok(data));
+        }).onErrorResume(e -> {
+            return Mono.just(ResponseUtil.serverError(e.getMessage()));
+        });
+    }
 
     @RequiresAuth
     @PostMapping("/getInfo")

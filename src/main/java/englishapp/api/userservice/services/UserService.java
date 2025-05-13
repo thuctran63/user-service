@@ -2,6 +2,7 @@ package englishapp.api.userservice.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import englishapp.api.userservice.dto.apiGetAllUser.OutputParamApiGetAllUser;
 import englishapp.api.userservice.dto.apiGetInfoUser.OutputParamApiGetInfoUser;
 import englishapp.api.userservice.dto.apiUpdateUser.InputParamApiUpdateUser;
 import englishapp.api.userservice.dto.apiUpdateUser.OutputParamApiUpdateUser;
@@ -13,6 +14,32 @@ import reactor.core.publisher.Mono;
 public class UserService {
     @Autowired
     private UserRepository userRepository;
+
+    public Mono<OutputParamApiGetAllUser> getAllUser() {
+        return userRepository.findAll() // Lấy tất cả người dùng từ repository
+                .map(user -> {
+                    // Tạo đối tượng OutputParamApiGetAllUser trước để tạo UserInfo
+                    OutputParamApiGetAllUser output = new OutputParamApiGetAllUser(); // Tạo đối tượng bao ngoài
+
+                    // Tạo mỗi UserInfo từ User
+                    OutputParamApiGetAllUser.UserInfo userInfo = output.new UserInfo( // Chú ý là bạn phải dùng
+                                                                                      // output.new để tạo UserInfo
+                            user.getUserId(),
+                            user.getUserName(),
+                            user.getEmail(),
+                            user.getTypeUser(),
+                            user.getCreatedAt().toString() // Đảm bảo chuyển đổi đúng định dạng
+                    );
+                    return userInfo;
+                })
+                .collectList() // Thu thập tất cả các UserInfo thành một List
+                .map(userList -> {
+                    // Gán danh sách UserInfo vào OutputParamApiGetAllUser
+                    OutputParamApiGetAllUser output = new OutputParamApiGetAllUser();
+                    output.setUsers(userList); // Gán danh sách người dùng
+                    return output;
+                });
+    }
 
     public Mono<OutputParamApiGetInfoUser> getInfoUser(String userId) {
         return userRepository.findById(
